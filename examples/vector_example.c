@@ -1,4 +1,4 @@
-#include <containers/vector.h>
+#include <cxx/vector.h>
 
 #include <stdio.h>
 
@@ -37,6 +37,7 @@ int main(void)
         CXX_VECTOR_EMPLACE_BACK(&matrix, sizeof(int), false);
         CXX_VECTOR_EMPLACE_BACK(&matrix, sizeof(int), false);
 
+        // Setting `matrix` to [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
         int number = 0;
         for (size_t i = 0; i < matrix.vtable->size(&matrix); ++i)
         {
@@ -49,6 +50,7 @@ int main(void)
             }
         }
 
+        // Printing top-left to bottom-right
         for (size_t i = 0; i < matrix.vtable->size(&matrix); ++i)
         {
             cxx_vector *row = matrix.vtable->at(&matrix, i);

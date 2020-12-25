@@ -2,9 +2,16 @@ add_executable(vector_example
 	vector_example.c
 )
 
-get_target_property(CONTAINERS_INCLUDES containers INCLUDE_DIRECTORIES)
-
 target_link_libraries(vector_example
 	PUBLIC
-		containers
+		objects
+)
+
+add_executable(vehicle_example
+	vehicle_example.c
+)
+
+target_link_libraries(vehicle_example
+	PUBLIC
+		objects
 )

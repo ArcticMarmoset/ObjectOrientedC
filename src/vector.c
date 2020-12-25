@@ -1,4 +1,4 @@
-#include "containers/vector.h"
+#include "cxx/vector.h"
 
 #include <assert.h>
 #include <string.h>
@@ -6,7 +6,7 @@
 // Public
 static void         cxx_vector__destroy(cxx_vector *this);
 
-static void         cxx_vector__set_element_ctor(cxx_vector *this, ctor_pointer_type ctor);
+static void         cxx_vector__set_element_ctor(cxx_vector *this, void *ctor);
 
 static void         cxx_vector__reserve(cxx_vector *this, size_t size);
 static void         cxx_vector__grow_one(cxx_vector *this);
@@ -66,7 +66,7 @@ void cxx_vector__destroy(cxx_vector *this)
     free(this->data);
 }
 
-static void cxx_vector__set_element_ctor(cxx_vector *this, ctor_pointer_type ctor)
+static void cxx_vector__set_element_ctor(cxx_vector *this, void *ctor)
 {
     this->element_ctor = ctor;
 }
