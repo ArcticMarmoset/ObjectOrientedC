@@ -2,6 +2,11 @@
 .vs/
 bin/
 bin-int/
+cmake-build-*/
+build/
+debug/
+release/
 
 # Files
 **/*.user
+CMakeSettings.json
