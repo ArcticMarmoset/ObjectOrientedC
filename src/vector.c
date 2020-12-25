@@ -1,71 +1,122 @@
 #include "containers/vector.h"
+
 #include <assert.h>
-#include <stdint.h>
-#include <stdlib.h>
 #include <string.h>
 
-static void   vector__reserve(vector *this, size_t size);
-static void   vector__push_back(vector *this, const void *element);
-static void * vector__at(const vector *this, size_t index);
-static size_t vector__size(const vector *this);
-static size_t vector__capacity(const vector *this);
+// Public
+static void         cxx_vector__destroy(cxx_vector *this);
 
-static void   vector__grow(vector *this, size_t capacity);
+static void         cxx_vector__set_element_ctor(cxx_vector *this, ctor_pointer_type ctor);
 
-static struct vector__vtable vector_vtable =
+static void         cxx_vector__reserve(cxx_vector *this, size_t size);
+static void         cxx_vector__grow_one(cxx_vector *this);
+static void         cxx_vector__push_back(cxx_vector *this, const void *element);
+static void         cxx_vector__pop_back(cxx_vector *this);
+static void *       cxx_vector__at(const cxx_vector *this, size_t index);
+static size_t       cxx_vector__size(const cxx_vector *this);
+static size_t       cxx_vector__capacity(const cxx_vector *this);
+static void *       cxx_vector__data(cxx_vector *this);
+static const void * cxx_vector__data_const(const cxx_vector *this);
+
+// Private
+static void cxx_vector__grow(cxx_vector *this, size_t capacity);
+
+// Implementations
+static const struct cxx_vector__vtable vector_vtable =
 {
-    .reserve    = vector__reserve,
-    .push_back  = vector__push_back,
-    .at         = vector__at,
-    .size       = vector__size,
-    .capacity   = vector__capacity,
+    .destroy      = cxx_vector__destroy,
+
+    .set_element_ctor = cxx_vector__set_element_ctor,
+
+    .reserve      = cxx_vector__reserve,
+    .grow_one     = cxx_vector__grow_one,
+    .push_back    = cxx_vector__push_back,
+    .pop_back     = cxx_vector__pop_back,
+    .at           = cxx_vector__at,
+    .size         = cxx_vector__size,
+    .capacity     = cxx_vector__capacity,
+    .data         = cxx_vector__data,
+    .data_const   = cxx_vector__data_const,
 };
 
-void vector__init(vector *this, size_t stride)
+void cxx_vector_init(cxx_vector *this, size_t stride, bool objects)
 {
-    this->capacity = 0;
-    this->count    = 0;
-    this->stride   = stride;
-    this->data     = NULL;
-    this->vtable   = &vector_vtable;
+    this->vtable       = &vector_vtable;
+
+    this->element_ctor = NULL;
+
+    this->contains_objects = objects;
+    this->capacity         = 0;
+    this->size             = 0;
+    this->stride           = stride;
+    this->data             = NULL;
 }
 
-void vector__reserve(vector *this, size_t size)
+void cxx_vector__destroy(cxx_vector *this)
 {
-    vector__grow(this, size);
-}
-
-void vector__push_back(vector *this, const void *element)
-{
-    const size_t offset = this->count++ * this->stride;
-
-    if (this->count > this->capacity)
+    if (this->contains_objects)
     {
-        vector__grow(this, this->capacity * 2);
+        for (size_t i = 0; i < this->size; i++)
+        {
+            void *element = this->vtable->at(this, i);
+            struct object__vtable **table = element;
+            (*table)->destroy(element);
+        }
     }
+    free(this->data);
+}
 
+static void cxx_vector__set_element_ctor(cxx_vector *this, ctor_pointer_type ctor)
+{
+    this->element_ctor = ctor;
+}
+
+void cxx_vector__reserve(cxx_vector *this, size_t size)
+{
+    cxx_vector__grow(this, size);
+}
+
+void cxx_vector__grow_one(cxx_vector *this)
+{
+    ++this->size;
+
+    if (this->size > this->capacity)
+    {
+        cxx_vector__grow(this, this->capacity * 2);
+    }
+}
+
+void cxx_vector__push_back(cxx_vector *this, const void *element)
+{
+    const size_t offset = this->size * this->stride;
+    this->vtable->grow_one(this);
     void *const destination = (uint8_t *)this->data + offset;
     memcpy(destination, element, this->stride);
 }
 
-void *vector__at(const vector *this, size_t index)
+void cxx_vector__pop_back(cxx_vector *this)
 {
-    assert("Attempted to access out-of-bounds index" && (index < this->count));
+    --this->size;
+}
+
+void *cxx_vector__at(const cxx_vector *this, size_t index)
+{
+    assert("`index` is within array bounds" && (index < this->size));
     const size_t offset = index * this->stride;
     return (void *)((uint8_t *)this->data + offset);
 }
 
-size_t vector__size(const vector *this)
+size_t cxx_vector__size(const cxx_vector *this)
 {
-    return this->count;
+    return this->size;
 }
 
-size_t vector__capacity(const vector *this)
+size_t cxx_vector__capacity(const cxx_vector *this)
 {
     return this->capacity;
 }
 
-void vector__grow(vector *this, size_t capacity)
+void cxx_vector__grow(cxx_vector *this, size_t capacity)
 {
     if (capacity < this->capacity)
     {
@@ -75,12 +126,22 @@ void vector__grow(vector *this, size_t capacity)
     if (capacity == 0) capacity = 1;
 
     this->capacity = capacity;
-    void *newAddress = realloc(this->data, this->capacity * this->stride);
+    void *new_address = realloc(this->data, this->capacity * this->stride);
 
-    if (!newAddress)
+    if (!new_address)
     {
         abort();
     }
 
-    this->data = newAddress;
+    this->data = new_address;
+}
+
+void *cxx_vector__data(cxx_vector *this)
+{
+    return this->data;
+}
+
+const void *cxx_vector__data_const(const cxx_vector *this)
+{
+    return this->data;
 }

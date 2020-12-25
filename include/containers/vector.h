@@ -1,29 +1,54 @@
-#ifndef VECTOR_H
-#define VECTOR_H
+#ifndef CONTAINERS_VECTOR_H
+#define CONTAINERS_VECTOR_H
 
+#include "containers/common.h"
+
+#include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
 
-typedef struct vector vector;
+#define CXX_VECTOR_EMPLACE_BACK(this, ...)                                        \
+    {                                                                             \
+        const size_t offset = (this)->size * (this)->stride;                      \
+        (this)->vtable->grow_one((this));                                         \
+        void *const destination = (uint8_t *)(this)->data + offset;               \
+        if ((this)->element_ctor)                                                 \
+        {                                                                         \
+            ((void (*)())(this)->element_ctor)(destination VA_ARGS(__VA_ARGS__)); \
+        }                                                                         \
+    }
 
-struct vector__vtable
+typedef struct vector cxx_vector;
+
+struct cxx_vector__vtable
 {
-    void   (*reserve)(vector *this, size_t size);
-    void   (*push_back)(vector *this, const void *element);
-    void * (*at)(const vector *this, size_t index);
-    size_t (*size)(const vector *this);
-    size_t (*capacity)(const vector *this);
+    void         (*destroy)(cxx_vector *this);
+    void         (*set_element_ctor)(cxx_vector *this, ctor_pointer_type ctor);
+    void         (*reserve)(cxx_vector *this, size_t size);
+    void         (*grow_one)(cxx_vector *this);
+    void         (*push_back)(cxx_vector *this, const void *element);
+    void         (*pop_back)(cxx_vector *this);
+    void *       (*at)(const cxx_vector *this, size_t index);
+    size_t       (*size)(const cxx_vector *this);
+    size_t       (*capacity)(const cxx_vector *this);
+    void *       (*data)(cxx_vector *this);
+    const void * (*data_const)(const cxx_vector *this);
 };
 
 struct vector
 {
+    const struct cxx_vector__vtable *vtable;
+
+    ctor_pointer_type element_ctor;
+
+    bool   contains_objects;
     size_t capacity;
-    size_t count;
+    size_t size;
     void * data;
     size_t stride;
-
-    struct vector__vtable *vtable;
 };
 
-void vector__init(vector *this, size_t stride);
+void cxx_vector_init(cxx_vector *this, size_t stride, bool objects);
 
 #endif
